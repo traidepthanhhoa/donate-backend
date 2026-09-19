@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
 
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
@@ -27,28 +28,47 @@ app.post('/api/nap-the', async (req, res) => {
   const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
   try {
-    const body = {
+    // Tạo chữ ký theo đúng thứ tự: partner_key + code + command + partner_id + request_id + serial + telco
+    // Nguồn: Tài liệu Postman Card24h [citation:5]
+    const sign = crypto.createHash('md5')
+      .update(process.env.PARTNER_KEY + mathe + 'charging' + process.env.PARTNER_ID + requestId + seri + loaithe.toUpperCase())
+      .digest('hex');
+
+    // Gửi dạng form-urlencoded (KHÔNG phải JSON)
+    const formData = new URLSearchParams({
       partner_id: process.env.PARTNER_ID,
-      partner_key: process.env.PARTNER_KEY,
-      card_type: loaithe.toUpperCase(),
-      card_amount: parseInt(menhgia),
-      card_serial: seri.trim(),
-      card_code: mathe.trim(),
-      request_id: requestId
-    };
-
-    console.log('📤 Gửi lên Card24h:', { ...body, partner_key: '***HIDDEN***' });
-
-    const response = await fetch('https://card24h.com/chargingws/v2', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      request_id: requestId,
+      code: mathe,
+      serial: seri,
+      telco: loaithe.toUpperCase(),
+      amount: menhgia,
+      command: 'charging',
+      callback_sign: sign
     });
 
-    const result = await response.json();
-    console.log('📥 Card24h trả về:', result);
+    console.log('📤 Gửi lên Card24h:', { partner_id: process.env.PARTNER_ID, request_id: requestId, telco: loaithe.toUpperCase(), amount: menhgia });
 
-    if (result.status === 1 || result.errorCode === 0 || result.success === true) {
+    // Endpoint đúng: https://card24h.com/chargingws/v2
+    const response = await fetch('https://card24h.com/chargingws/v2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
+    });
+
+    const rawText = await response.text();
+    console.log('📥 Card24h trả về (raw):', rawText);
+
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch (e) {
+      // Nếu Card24h trả về text thường (ví dụ: "1|Thành công")
+      result = { message: rawText };
+    }
+
+    // Xử lý kết quả: Card24h có thể trả về status=1, errorCode=0, hoặc các mã lỗi 3xx
+    // Mã lỗi phổ biến: 323 = Sai chữ ký, 321 = Merchant không tồn tại [citation:5]
+    if (result.status === 1 || result.errorCode === 0 || (rawText && rawText.includes('1|'))) {
       return res.json({
         success: true,
         message: `Đã gửi thẻ ${parseInt(menhgia).toLocaleString('vi-VN')}đ, chờ xử lý...`,
@@ -58,7 +78,7 @@ app.post('/api/nap-the', async (req, res) => {
 
     return res.json({
       success: false,
-      message: result.message || 'Thẻ không hợp lệ hoặc đã được sử dụng',
+      message: result.message || rawText || 'Thẻ không hợp lệ hoặc đã được sử dụng',
       request_id: requestId
     });
 
@@ -76,21 +96,24 @@ app.post('/api/nap-the', async (req, res) => {
 });
 
 // ============================================
-// ROUTE 2: Callback từ Card24h gọi về
+// ROUTE 2: Callback từ Card24h gọi về (GET)
 // ============================================
 app.get('/api/callback', (req, res) => {
   const { status, request_id, message, amount, card_type, card_amount } = req.query;
-  console.log('📩 Callback nhận được:', { status, request_id, message, amount, card_type, card_amount });
-  res.status(200).send('OK');
-});
-
-app.post('/api/callback', (req, res) => {
-  console.log('📩 Callback POST:', req.body);
+  console.log('📩 Callback GET nhận được:', { status, request_id, message, amount, card_type, card_amount });
   res.status(200).send('OK');
 });
 
 // ============================================
-// ROUTE 3: DEBUG - Kiểm tra kết nối Card24h
+// ROUTE 3: Callback từ Card24h gọi về (POST)
+// ============================================
+app.post('/api/callback', (req, res) => {
+  console.log('📩 Callback POST nhận được:', req.body);
+  res.status(200).send('OK');
+});
+
+// ============================================
+// ROUTE 4: DEBUG - Kiểm tra kết nối Card24h
 // Mở: https://donate-api-v4h1.onrender.com/api/test
 // ============================================
 app.get('/api/test', async (req, res) => {
@@ -107,30 +130,41 @@ app.get('/api/test', async (req, res) => {
   };
 
   try {
-    const body = {
+    const requestId = 'test_' + Date.now();
+    const seri = '123456789';
+    const mathe = '123456789012';
+    const loaithe = 'VIETTEL';
+
+    // Tạo chữ ký
+    const sign = crypto.createHash('md5')
+      .update(process.env.PARTNER_KEY + mathe + 'charging' + process.env.PARTNER_ID + requestId + seri + loaithe)
+      .digest('hex');
+
+    const formData = new URLSearchParams({
       partner_id: process.env.PARTNER_ID,
-      partner_key: process.env.PARTNER_KEY,
-      card_type: 'VIETTEL',
-      card_amount: 10000,
-      card_serial: '123456789',
-      card_code: '123456789012',
-      request_id: 'test_' + Date.now()
-    };
+      request_id: requestId,
+      code: mathe,
+      serial: seri,
+      telco: loaithe,
+      amount: '10000',
+      command: 'charging',
+      callback_sign: sign
+    });
 
     console.log('🧪 [TEST] Gửi lên Card24h');
 
     const response = await fetch('https://card24h.com/chargingws/v2', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
     });
 
     const rawText = await response.text();
 
     debug.card24h_test = {
-      url: 'https://card24h.com/api/charging',
+      url: 'https://card24h.com/chargingws/v2',
       http_status: response.status,
-      raw_response: rawText.slice(0, 1000)
+      raw_response: rawText.slice(0, 2000)
     };
 
     try {
