@@ -16,6 +16,16 @@ app.get('/', (req, res) => {
 });
 
 // ============================================
+// Hàm tạo chữ ký MD5 theo tài liệu Card24h
+// Thứ tự: partner_key + code + command + partner_id + request_id + serial + telco
+// ============================================
+function taoChuKy(partnerKey, code, command, partnerId, requestId, serial, telco) {
+  return crypto.createHash('md5')
+    .update(partnerKey + code + command + partnerId + requestId + serial + telco)
+    .digest('hex');
+}
+
+// ============================================
 // ROUTE 1: Nhận thẻ từ frontend → Gửi lên Card24h
 // ============================================
 app.post('/api/nap-the', async (req, res) => {
@@ -25,30 +35,38 @@ app.post('/api/nap-the', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Thiếu thông tin thẻ' });
   }
 
+  const partnerId = process.env.PARTNER_ID;
+  const partnerKey = process.env.PARTNER_KEY;
   const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const telco = loaithe.toUpperCase();
+  const code = mathe.trim();
+  const serial = seri.trim();
+  const amount = String(menhgia);
 
   try {
-    // Tạo chữ ký theo đúng thứ tự: partner_key + code + command + partner_id + request_id + serial + telco
-    // Nguồn: Tài liệu Postman Card24h [citation:5]
-    const sign = crypto.createHash('md5')
-      .update(process.env.PARTNER_KEY + mathe + 'charging' + process.env.PARTNER_ID + requestId + seri + loaithe.toUpperCase())
-      .digest('hex');
+    // Tạo chữ ký
+    const sign = taoChuKy(partnerKey, code, 'charging', partnerId, requestId, serial, telco);
 
-    // Gửi dạng form-urlencoded (KHÔNG phải JSON)
-    const formData = new URLSearchParams({
-      partner_id: process.env.PARTNER_ID,
+    // Tạo form-urlencoded body
+    const formData = new URLSearchParams();
+    formData.append('partner_id', partnerId);
+    formData.append('request_id', requestId);
+    formData.append('code', code);
+    formData.append('serial', serial);
+    formData.append('telco', telco);
+    formData.append('amount', amount);
+    formData.append('command', 'charging');
+    formData.append('callback_sign', sign);
+
+    console.log('📤 Gửi lên Card24h:', {
+      partner_id: partnerId,
       request_id: requestId,
-      code: mathe,
-      serial: seri,
-      telco: loaithe.toUpperCase(),
-      amount: menhgia,
-      command: 'charging',
-      callback_sign: sign
+      telco: telco,
+      amount: amount,
+      serial: serial.slice(0, 4) + '***',
+      code: code.slice(0, 4) + '***'
     });
 
-    console.log('📤 Gửi lên Card24h:', { partner_id: process.env.PARTNER_ID, request_id: requestId, telco: loaithe.toUpperCase(), amount: menhgia });
-
-    // Endpoint đúng: https://card24h.com/chargingws/v2
     const response = await fetch('https://card24h.com/chargingws/v2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -62,13 +80,12 @@ app.post('/api/nap-the', async (req, res) => {
     try {
       result = JSON.parse(rawText);
     } catch (e) {
-      // Nếu Card24h trả về text thường (ví dụ: "1|Thành công")
       result = { message: rawText };
     }
 
-    // Xử lý kết quả: Card24h có thể trả về status=1, errorCode=0, hoặc các mã lỗi 3xx
-    // Mã lỗi phổ biến: 323 = Sai chữ ký, 321 = Merchant không tồn tại [citation:5]
-    if (result.status === 1 || result.errorCode === 0 || (rawText && rawText.includes('1|'))) {
+    // Card24h trả về status = 1 là thành công, các mã khác là lỗi
+    // Mã lỗi: 102 = INPUT_DATA_INCORRECT, 307-332 là lỗi thẻ, 323 = sai chữ ký
+    if (result.status === 1) {
       return res.json({
         success: true,
         message: `Đã gửi thẻ ${parseInt(menhgia).toLocaleString('vi-VN')}đ, chờ xử lý...`,
@@ -76,9 +93,21 @@ app.post('/api/nap-the', async (req, res) => {
       });
     }
 
+    // Xử lý các mã lỗi phổ biến
+    const errorMessages = {
+      102: 'Dữ liệu gửi lên không đúng định dạng',
+      307: 'Thẻ đã tồn tại trong hệ thống',
+      311: 'Thẻ sai định dạng',
+      321: 'Merchant không tồn tại hoặc không hoạt động',
+      323: 'Sai chữ ký (kiểm tra lại thứ tự tham số)',
+      324: 'Merchant sai IP đăng ký'
+    };
+
+    const errorMsg = errorMessages[result.status] || result.message || 'Thẻ không hợp lệ hoặc đã được sử dụng';
+
     return res.json({
       success: false,
-      message: result.message || rawText || 'Thẻ không hợp lệ hoặc đã được sử dụng',
+      message: `${errorMsg} (mã ${result.status})`,
       request_id: requestId
     });
 
@@ -97,10 +126,22 @@ app.post('/api/nap-the', async (req, res) => {
 
 // ============================================
 // ROUTE 2: Callback từ Card24h gọi về (GET)
+// URL: https://donate-api-v4h1.onrender.com/api/callback
 // ============================================
 app.get('/api/callback', (req, res) => {
-  const { status, request_id, message, amount, card_type, card_amount } = req.query;
-  console.log('📩 Callback GET nhận được:', { status, request_id, message, amount, card_type, card_amount });
+  const { status, request_id, message, amount, card_type, card_amount, code, serial } = req.query;
+  console.log('📩 Callback GET nhận được:', {
+    status, request_id, message, amount, card_type, card_amount
+  });
+
+  if (String(status) === '1') {
+    console.log(`✅ Thẻ ${card_type} ${card_amount}đ thành công. Request: ${request_id}`);
+    // TODO: Cộng tiền cho user dựa vào request_id
+  } else {
+    console.log(`❌ Thẻ thất bại. Request: ${request_id}. Lý do: ${message}`);
+    // TODO: Đánh dấu đơn thất bại
+  }
+
   res.status(200).send('OK');
 });
 
@@ -130,28 +171,28 @@ app.get('/api/test', async (req, res) => {
   };
 
   try {
+    const partnerId = process.env.PARTNER_ID;
+    const partnerKey = process.env.PARTNER_KEY;
     const requestId = 'test_' + Date.now();
-    const seri = '123456789';
-    const mathe = '123456789012';
-    const loaithe = 'VIETTEL';
+    const telco = 'VIETTEL';
+    const code = '123456789012';
+    const serial = '123456789';
+    const amount = '10000';
 
     // Tạo chữ ký
-    const sign = crypto.createHash('md5')
-      .update(process.env.PARTNER_KEY + mathe + 'charging' + process.env.PARTNER_ID + requestId + seri + loaithe)
-      .digest('hex');
+    const sign = taoChuKy(partnerKey, code, 'charging', partnerId, requestId, serial, telco);
 
-    const formData = new URLSearchParams({
-      partner_id: process.env.PARTNER_ID,
-      request_id: requestId,
-      code: mathe,
-      serial: seri,
-      telco: loaithe,
-      amount: '10000',
-      command: 'charging',
-      callback_sign: sign
-    });
+    const formData = new URLSearchParams();
+    formData.append('partner_id', partnerId);
+    formData.append('request_id', requestId);
+    formData.append('code', code);
+    formData.append('serial', serial);
+    formData.append('telco', telco);
+    formData.append('amount', amount);
+    formData.append('command', 'charging');
+    formData.append('callback_sign', sign);
 
-    console.log('🧪 [TEST] Gửi lên Card24h');
+    console.log('🧪 [TEST] Gửi lên Card24h với body:', formData.toString().replace(sign, '***SIGN***'));
 
     const response = await fetch('https://card24h.com/chargingws/v2', {
       method: 'POST',
@@ -161,8 +202,14 @@ app.get('/api/test', async (req, res) => {
 
     const rawText = await response.text();
 
-    debug.card24h_test = {
+    debug.request_sent = {
       url: 'https://card24h.com/chargingws/v2',
+      method: 'POST',
+      content_type: 'application/x-www-form-urlencoded',
+      body_preview: formData.toString().replace(sign, '***SIGN***')
+    };
+
+    debug.card24h_test = {
       http_status: response.status,
       raw_response: rawText.slice(0, 2000)
     };
