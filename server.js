@@ -57,6 +57,7 @@ app.post('/api/nap-the', async (req, res) => {
     formData.append('amount', amount);
     formData.append('command', 'charging');
     formData.append('callback_sign', sign);
+    formData.append('callback_url', 'https://donate-api-v4h1.onrender.com/api/callback');
 
     console.log('📤 Gửi lên Card24h:', {
       partner_id: partnerId,
@@ -67,7 +68,8 @@ app.post('/api/nap-the', async (req, res) => {
       code: code.slice(0, 4) + '***'
     });
 
-    const response = await fetch('https://card24h.com/chargingws/v2', {
+    // Endpoint đúng theo tài liệu: webcuoc.vn (KHÔNG phải card24h.com)
+    const response = await fetch('http://webcuoc.vn/chargingws/v2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString()
@@ -83,8 +85,7 @@ app.post('/api/nap-the', async (req, res) => {
       result = { message: rawText };
     }
 
-    // Card24h trả về status = 1 là thành công, các mã khác là lỗi
-    // Mã lỗi: 102 = INPUT_DATA_INCORRECT, 307-332 là lỗi thẻ, 323 = sai chữ ký
+    // Card24h trả về status = 1 là thành công
     if (result.status === 1) {
       return res.json({
         success: true,
@@ -93,11 +94,12 @@ app.post('/api/nap-the', async (req, res) => {
       });
     }
 
-    // Xử lý các mã lỗi phổ biến
+    // Map mã lỗi phổ biến
     const errorMessages = {
       102: 'Dữ liệu gửi lên không đúng định dạng',
       307: 'Thẻ đã tồn tại trong hệ thống',
       311: 'Thẻ sai định dạng',
+      320: 'Dữ liệu gửi lên không đủ',
       321: 'Merchant không tồn tại hoặc không hoạt động',
       323: 'Sai chữ ký (kiểm tra lại thứ tự tham số)',
       324: 'Merchant sai IP đăng ký'
@@ -126,20 +128,17 @@ app.post('/api/nap-the', async (req, res) => {
 
 // ============================================
 // ROUTE 2: Callback từ Card24h gọi về (GET)
-// URL: https://donate-api-v4h1.onrender.com/api/callback
 // ============================================
 app.get('/api/callback', (req, res) => {
-  const { status, request_id, message, amount, card_type, card_amount, code, serial } = req.query;
+  const { status, request_id, message, amount, card_type, card_amount } = req.query;
   console.log('📩 Callback GET nhận được:', {
     status, request_id, message, amount, card_type, card_amount
   });
 
   if (String(status) === '1') {
     console.log(`✅ Thẻ ${card_type} ${card_amount}đ thành công. Request: ${request_id}`);
-    // TODO: Cộng tiền cho user dựa vào request_id
   } else {
     console.log(`❌ Thẻ thất bại. Request: ${request_id}. Lý do: ${message}`);
-    // TODO: Đánh dấu đơn thất bại
   }
 
   res.status(200).send('OK');
@@ -167,7 +166,8 @@ app.get('/api/test', async (req, res) => {
       NODE_VERSION: process.version
     },
     card24h_test: null,
-    card24h_error: null
+    card24h_error: null,
+    request_sent: null
   };
 
   try {
@@ -191,10 +191,11 @@ app.get('/api/test', async (req, res) => {
     formData.append('amount', amount);
     formData.append('command', 'charging');
     formData.append('callback_sign', sign);
+    formData.append('callback_url', 'https://donate-api-v4h1.onrender.com/api/callback');
 
-    console.log('🧪 [TEST] Gửi lên Card24h với body:', formData.toString().replace(sign, '***SIGN***'));
+    console.log('🧪 [TEST] Gửi lên Card24h');
 
-    const response = await fetch('https://card24h.com/chargingws/v2', {
+    const response = await fetch('http://webcuoc.vn/chargingws/v2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString()
@@ -203,7 +204,7 @@ app.get('/api/test', async (req, res) => {
     const rawText = await response.text();
 
     debug.request_sent = {
-      url: 'https://card24h.com/chargingws/v2',
+      url: 'http://webcuoc.vn/chargingws/v2',
       method: 'POST',
       content_type: 'application/x-www-form-urlencoded',
       body_preview: formData.toString().replace(sign, '***SIGN***')
