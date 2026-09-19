@@ -54,7 +54,74 @@ app.post('/api/nap-the', async (req, res) => {
 
     return res.json({
       success: false,
-      message: result.message || 'Thẻ không hợp lệ hoặc đã được sử dụng',
+      message: result.message |// ============================================
+// ROUTE DEBUG: Kiểm tra kết nối Card24h
+// Mở trên trình duyệt: https://donate-api-v4h1.onrender.com/api/test
+// ============================================
+app.get('/api/test', async (req, res) => {
+  const debug = {
+    timestamp: new Date().toISOString(),
+    env: {
+      PARTNER_ID: process.env.PARTNER_ID ? '✅ Có (' + process.env.PARTNER_ID.slice(0, 4) + '...)' : '❌ THIẾU',
+      PARTNER_KEY: process.env.PARTNER_KEY ? '✅ Có (độ dài: ' + process.env.PARTNER_KEY.length + ')' : '❌ THIẾU',
+      PORT: process.env.PORT || '3000 (mặc định)',
+      NODE_VERSION: process.version
+    },
+    card24h_test: null,
+    card24h_error: null
+  };
+
+  // Thử gọi Card24h
+  try {
+    const body = {
+      partner_id: process.env.PARTNER_ID,
+      partner_key: process.env.PARTNER_KEY,
+      card_type: 'VIETTEL',
+      card_amount: 10000,
+      card_serial: '123456789',
+      card_code: '123456789012',
+      request_id: 'test_' + Date.now()
+    };
+
+    console.log('🧪 [TEST] Gửi lên Card24h:', { ...body, partner_key: '***' });
+
+    const response = await fetch('https://card24h.com/api/charging', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      // Timeout 15s để không treo
+      signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined
+    });
+
+    const httpStatus = response.status;
+    const rawText = await response.text();
+
+    debug.card24h_test = {
+      url: 'https://card24h.com/api/charging',
+      http_status: httpStatus,
+      raw_response: rawText.slice(0, 1000),
+      parsed_json: null
+    };
+
+    // Thử parse JSON
+    try {
+      debug.card24h_test.parsed_json = JSON.parse(rawText);
+    } catch (e) {
+      debug.card24h_test.json_parse_error = e.message;
+    }
+
+  } catch (err) {
+    debug.card24h_error = {
+      name: err.name,
+      message: err.message,
+      code: err.code,
+      cause: err.cause ? String(err.cause) : null
+    };
+    console.error('❌ [TEST] Lỗi:', err);
+  }
+
+  res.json(debug);
+});| 'Thẻ không hợp lệ hoặc đã được sử dụng',
       request_id: requestId
     });
 
