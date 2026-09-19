@@ -39,7 +39,7 @@ app.post('/api/nap-the', async (req, res) => {
 
     console.log('📤 Gửi lên Card24h:', { ...body, partner_key: '***HIDDEN***' });
 
-    const response = await fetch('https://card24h.com/api/charging', {
+    const response = await fetch('https://card24h.com/chargingws/v2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -119,7 +119,7 @@ app.get('/api/test', async (req, res) => {
 
     console.log('🧪 [TEST] Gửi lên Card24h');
 
-    const response = await fetch('https://card24h.com/api/charging', {
+    const response = await fetch('https://card24h.com/chargingws/v2', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
