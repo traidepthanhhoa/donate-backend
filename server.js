@@ -10,6 +10,13 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// ============================================
+// CẤU HÌNH CARD24H
+// ============================================
+// Nếu tài liệu Card24h cấp cho bạn domain khác (ví dụ: api.card24h.com),
+// hãy đổi biến CARD24H_ENDPOINT dưới đây.
+const CARD24H_ENDPOINT = 'https://card24h.com/api/chargingws/v2';
+
 // Route kiểm tra server
 app.get('/', (req, res) => {
   res.send('✅ Backend Donate đang chạy!');
@@ -37,6 +44,14 @@ app.post('/api/nap-the', async (req, res) => {
 
   const partnerId = process.env.PARTNER_ID;
   const partnerKey = process.env.PARTNER_KEY;
+
+  if (!partnerId || !partnerKey) {
+    return res.status(500).json({
+      success: false,
+      message: 'Backend chưa cấu hình PARTNER_ID hoặc PARTNER_KEY'
+    });
+  }
+
   const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const telco = loaithe.toUpperCase();
   const code = mathe.trim();
@@ -60,6 +75,7 @@ app.post('/api/nap-the', async (req, res) => {
     formData.append('callback_url', 'https://donate-api-v4h1.onrender.com/api/callback');
 
     console.log('📤 Gửi lên Card24h:', {
+      endpoint: CARD24H_ENDPOINT,
       partner_id: partnerId,
       request_id: requestId,
       telco: telco,
@@ -68,8 +84,7 @@ app.post('/api/nap-the', async (req, res) => {
       code: code.slice(0, 4) + '***'
     });
 
-    // Endpoint đúng theo tài liệu: webcuoc.vn (KHÔNG phải card24h.com)
-    const response = await fetch('http://webcuoc.vn/chargingws/v2', {
+    const response = await fetch(CARD24H_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString()
@@ -86,7 +101,7 @@ app.post('/api/nap-the', async (req, res) => {
     }
 
     // Card24h trả về status = 1 là thành công
-    if (result.status === 1) {
+    if (result.status === 1 || result.status === '1') {
       return res.json({
         success: true,
         message: `Đã gửi thẻ ${parseInt(menhgia).toLocaleString('vi-VN')}đ, chờ xử lý...`,
@@ -102,7 +117,7 @@ app.post('/api/nap-the', async (req, res) => {
       320: 'Dữ liệu gửi lên không đủ',
       321: 'Merchant không tồn tại hoặc không hoạt động',
       323: 'Sai chữ ký (kiểm tra lại thứ tự tham số)',
-      324: 'Merchant sai IP đăng ký'
+      324: 'Merchant sai IP đăng ký (cần thêm IP Render vào whitelist Card24h)'
     };
 
     const errorMsg = errorMessages[result.status] || result.message || 'Thẻ không hợp lệ hoặc đã được sử dụng';
@@ -165,6 +180,7 @@ app.get('/api/test', async (req, res) => {
       PORT: process.env.PORT || '3000',
       NODE_VERSION: process.version
     },
+    endpoint: CARD24H_ENDPOINT,
     card24h_test: null,
     card24h_error: null,
     request_sent: null
@@ -193,9 +209,9 @@ app.get('/api/test', async (req, res) => {
     formData.append('callback_sign', sign);
     formData.append('callback_url', 'https://donate-api-v4h1.onrender.com/api/callback');
 
-    console.log('🧪 [TEST] Gửi lên Card24h');
+    console.log('🧪 [TEST] Gửi lên Card24h:', CARD24H_ENDPOINT);
 
-    const response = await fetch('http://webcuoc.vn/chargingws/v2', {
+    const response = await fetch(CARD24H_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString()
@@ -204,7 +220,7 @@ app.get('/api/test', async (req, res) => {
     const rawText = await response.text();
 
     debug.request_sent = {
-      url: 'http://webcuoc.vn/chargingws/v2',
+      url: CARD24H_ENDPOINT,
       method: 'POST',
       content_type: 'application/x-www-form-urlencoded',
       body_preview: formData.toString().replace(sign, '***SIGN***')
@@ -239,4 +255,5 @@ app.get('/api/test', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server đang chạy tại cổng ${PORT}`);
+  console.log(`🔗 Endpoint Card24h: ${CARD24H_ENDPOINT}`);
 });
