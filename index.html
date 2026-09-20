@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Trang donate bằng thẻ cào">
+  <title>Donate bằng thẻ cào</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <main class="container">
+    <section class="card">
+      <div class="brand">
+        <div class="logo">D</div>
+        <div>
+          <h1>Donate</h1>
+          <p>Nạp thẻ cào nhanh chóng</p>
+        </div>
+      </div>
+
+      <div id="alert" class="alert" hidden></div>
+
+      <form id="cardForm" autocomplete="off">
+        <label for="loaithe">Nhà mạng</label>
+        <select id="loaithe" name="loaithe" required>
+          <option value="" selected disabled>-- Chọn nhà mạng --</option>
+          <option value="VIETTEL">Viettel</option>
+          <option value="VINAPHONE">Vinaphone</option>
+          <option value="MOBIFONE">Mobifone</option>
+          <option value="VIETNAMOBILE">Vietnamobile</option>
+          <option value="GATE">Gate</option>
+        </select>
+
+        <label for="menhgia">Mệnh giá</label>
+        <select id="menhgia" name="menhgia" required>
+          <option value="" selected disabled>-- Chọn mệnh giá --</option>
+          <option value="10000">10.000đ</option>
+          <option value="20000">20.000đ</option>
+          <option value="30000">30.000đ</option>
+          <option value="50000">50.000đ</option>
+          <option value="100000">100.000đ</option>
+          <option value="200000">200.000đ</option>
+          <option value="300000">300.000đ</option>
+          <option value="500000">500.000đ</option>
+        </select>
+
+        <label for="seri">Serial</label>
+        <input id="seri" name="seri" type="text" inputmode="numeric"
+               placeholder="Nhập số serial" maxlength="30" required>
+
+        <label for="mathe">Mã thẻ</label>
+        <input id="mathe" name="mathe" type="password" inputmode="numeric"
+               placeholder="Nhập mã thẻ" maxlength="40" required>
+
+        <button id="submitBtn" type="submit">
+          <span class="btn-text">Gửi thẻ</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+
+      <div class="result" id="result" hidden>
+        <div class="result-icon" id="resultIcon">✓</div>
+        <div>
+          <strong id="resultTitle">Đã gửi</strong>
+          <p id="resultMessage"></p>
+          <small id="requestId"></small>
+        </div>
+      </div>
+
+      <p class="note">
+        Thẻ được gửi tới hệ thống xử lý sau khi bạn bấm “Gửi thẻ”.
+        Kiểm tra kỹ nhà mạng, mệnh giá, serial và mã thẻ trước khi gửi.
+      </p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
