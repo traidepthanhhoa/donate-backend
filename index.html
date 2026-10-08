@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Xác Minh Robot | Matchat67</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+:root, [data-theme="dark"] {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface-2: #171717;
+  --line: #262626;
+  --line-strong: #333;
+  --text: #fafafa;
+  --text-soft: #b0b0b0;
+  --muted: #7a7a7a;
+  --purple: #a78bfa;
+  --pink: #f472b6;
+  --cyan: #22d3ee;
+  --green: #34d399;
+  --red: #f87171;
+}
+[data-theme="light"] {
+  --bg: #fbfbfd;
+  --surface: #ffffff;
+  --surface-2: #f5f5f7;
+  --line: #e4e4e9;
+  --line-strong: #c9c9d1;
+  --text: #1c1c22;
+  --text-soft: #4b4b55;
+  --muted: #6b6b75;
+  --purple: #6d28d9;
+  --pink: #db2777;
+  --cyan: #0891b2;
+  --green: #059669;
+  --red: #dc2626;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(167, 139, 250, .12), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(244, 114, 182, .1), transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+.verify-wrap {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  padding: 40px 32px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  animation: riseIn .5s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.verify-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 40px rgba(167, 139, 250, .5);
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 30px rgba(167, 139, 250, .4); }
+  50% { box-shadow: 0 0 60px rgba(167, 139, 250, .8); }
+}
+.verify-icon svg {
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  stroke-width: 2.5;
+}
+.verify-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -.02em;
+  color: var(--text);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.verify-sub {
+  font-size: .92rem;
+  color: var(--text-soft);
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+.verify-steps {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+.verify-steps h4 {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin-bottom: 14px;
+}
+.verify-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: .88rem;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.verify-step-num {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--purple);
+  color: #000;
+  font-weight: 800;
+  font-size: .78rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "JetBrains Mono", monospace;
+}
+.verify-step b { color: var(--text); }
+.verify-step code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .82em;
+  padding: 2px 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--purple);
+}
+.verify-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .25s cubic-bezier(.2, .8, .2, 1);
+  box-shadow: 0 8px 24px rgba(167, 139, 250, .4);
+  margin-bottom: 16px;
+}
+.verify-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(167, 139, 250, .6);
+}
+.verify-btn:active { transform: translateY(0); }
+.verify-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.5;
+}
+.verify-note {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.verify-note strong { color: var(--pink); }
+.verify-status {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: .82rem;
+  display: none;
+}
+.verify-status.show { display: block; }
+.verify-status.waiting {
+  background: rgba(167, 139, 250, .1);
+  border: 1px solid var(--purple);
+  color: var(--purple);
+}
+.verify-status.success {
+  background: rgba(52, 211, 153, .1);
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+.verify-status.error {
+  background: rgba(248, 113, 113, .1);
+  border: 1px solid var(--red);
+  color: var(--red);
+}
+@media (max-width: 500px) {
+  .verify-wrap { padding: 32px 22px; }
+  .verify-icon { width: 68px; height: 68px; }
+  .verify-icon svg { width: 34px; height: 34px; }
+  .verify-title { font-size: 1.25rem; }
+  .verify-sub { font-size: .85rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="verify-wrap">
+  <div class="verify-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  </div>
+
+  <h1 class="verify-title">🤖 Xác Minh Robot</h1>
+  <p class="verify-sub">
+    Để truy cập web, vui lòng xác minh bạn không phải là robot. Quá trình chỉ mất <b>~10 giây</b>.
+  </p>
+
+  <div class="verify-steps">
+    <h4>📝 Hướng dẫn</h4>
+    <div class="verify-step">
+      <span class="verify-step-num">1</span>
+      <span>Bấm nút <b>"XÁC MINH NGAY"</b> bên dưới</span>
+    </div>
+    <div class="verify-step">
+      <span class="verify-step-num">2</span>
+      <span>Vượt xác minh trong tab mới (chờ <code>10 giây</code>)</span>
+    </div>
+    <div class="verify-step">
+      <span class="verify-step-num">3</span>
+      <span>Bấm <b>"Tiếp tục"</b> → web sẽ tự mở khóa</span>
+    </div>
+  </div>
+
+  <a
+    id="verifyBtn"
+    class="verify-btn"
+    href="#"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+    <span>🔓 XÁC MINH NGAY</span>
+  </a>
+
+  <p class="verify-note">
+    Sau khi vượt link, quay lại trang này để hoàn tất.<br>
+    <strong>⏱️ Hiệu lực: 7 ngày</strong>
+  </p>
+
+  <div id="verifyStatus" class="verify-status"></div>
+</div>
+
+<script>
+// ⚠️ SỬA 2 DÒNG NÀY SAU
+const VERIFY_CONFIG = {
+  verifyLink: 'https://vuotnhanh.com/HYVi',       // Link vuotnhanh của bạn
+  webUrl: 'https://kenhmatchat-executor.vercel.app/',  // URL web của bạn
+  token: 'matchat2026',                            // Token bí mật
+  storageKey: 'matchat_verified_until',
+  durationMs: 7 * 24 * 60 * 60 * 1000              // 7 ngày
+};
+
+// ============ CHECK ĐÃ VERIFY CHƯA ============
+const verifiedUntil = parseInt(localStorage.getItem(VERIFY_CONFIG.storageKey) || '0', 10);
+if (Date.now() < verifiedUntil) {
+  // Đã verify → chuyển thẳng vào web
+  window.location.href = VERIFY_CONFIG.webUrl + '?verified=' + VERIFY_CONFIG.token;
+}
+
+// ============ CHECK URL CÓ TOKEN ============
+const params = new URLSearchParams(window.location.search);
+const tokenFromUrl = params.get('verified');
+if (tokenFromUrl === VERIFY_CONFIG.token) {
+  // Đúng token → lưu + chuyển vào web
+  localStorage.setItem(
+    VERIFY_CONFIG.storageKey,
+    String(Date.now() + VERIFY_CONFIG.durationMs)
+  );
+  window.location.href = VERIFY_CONFIG.webUrl;
+}
+
+// ============ HANDLE NÚT VERIFY ============
+const verifyBtn = document.getElementById('verifyBtn');
+const statusEl = document.getElementById('verifyStatus');
+
+verifyBtn.href = VERIFY_CONFIG.verifyLink;
+
+verifyBtn.addEventListener('click', () => {
+  statusEl.className = 'verify-status show waiting';
+  statusEl.textContent = '⏳ Đang mở tab xác minh... Hoàn thành xác minh xong, quay lại đây.';
+});
+
+// Auto check mỗi 2s xem user đã verify chưa (đề phòng vuotnhanh redirect nhầm)
+setInterval(() => {
+  const until = parseInt(localStorage.getItem(VERIFY_CONFIG.storageKey) || '0', 10);
+  if (Date.now() < until) {
+    statusEl.className = 'verify-status show success';
+    statusEl.textContent = '✅ Xác minh thành công! Đang chuyển vào web...';
+    setTimeout(() => {
+      window.location.href = VERIFY_CONFIG.webUrl;
+    }, 800);
+  }
+}, 2000);
+
+// ============ NÚT TEST ẨN (Ctrl+Shift+V) ============
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+    e.preventDefault();
+    localStorage.setItem(
+      VERIFY_CONFIG.storageKey,
+      String(Date.now() + VERIFY_CONFIG.durationMs)
+    );
+    statusEl.className = 'verify-status show success';
+    statusEl.textContent = '✅ Đã bỏ qua xác minh (test mode). Đang vào web...';
+    setTimeout(() => {
+      window.location.href = VERIFY_CONFIG.webUrl;
+    }, 600);
+  }
+});
+</script>
+
+</body>
+</html>
